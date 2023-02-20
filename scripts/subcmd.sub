@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd /N/project/GutD/GutDB/IBS/PRJEB42304/Round2
+
+##### the /N/project/GutD/GutDB/IBS/PRJEB42304/Round2/samples file contains the SRA IDs of the samples to run
+
+Samplename=$(head -n $SLURM_ARRAY_TASK_ID /N/project/GutD/GutDB/IBS/PRJEB42304/Round2/samples | tail -n 1)
+bash /N/project/GutD/GutDB/IBS/PRJEB42304/Rounqd2/hmn $Samplename
