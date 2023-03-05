@@ -19,7 +19,7 @@ while read -r QUERY <&3; do
     fi
 
     #download if file doesn't exist
-    FILEPE="${INDIR}/${QUERY}_no_host.fastq.gz"
+    FILEPE="${INDIR}/${QUERY}/${QUERY}.fastq.gz"
     if test -f "$FILEPE"; then
        FILE=$FILEPE
        echo "$FILE exists."

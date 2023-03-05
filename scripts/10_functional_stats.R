@@ -1,14 +1,21 @@
-#Genevieve Mortensen for I790 modified 02/01/2022
+#Genevieve Mortensen for I790 modified 02/08/2023
 
-### MICROBIOME PROFILE OF PREGNANT PEOPLE ###
-
-# Taxonomic Profiling #
+########################################################
+### FUNCTIONAL PROFILE OF PREGNANT PERSON MICROBIOME ###
+########################################################
 
 ##load libraries
 library(readr)
 library(heatmaply)
 library(ggplot2)
 library(edgeR)
+library(magrittr)
+library(dplyr)
+library(reshape)
+library(tidyr)
+library(broom)
+
+### PRELIMINARY VISUALIZATION ###
 
 ##Set working directory
 #setwd("home/gamorten/prj/pergnancy/humann_work/")
@@ -20,57 +27,127 @@ pregnant_df <- data.frame(pregnant_vector[,-1], row.names=pregnant_vector[,1])
 
 ##Go through each row and determine if a value is zero
 row_sub = apply(pregnant_df, 1, function(row) all(row !=0 ))
+
 ##Subset as new dataframe
 pregnant_df_2 <- pregnant_df[row_sub,]
 ##Declare matrix
 pregnant_mtx <- as.matrix(pregnant_df_2)
+
 ##Create heatmap
-heatmaply(pregnant_mtx, 
-          fontsize_col = 2,
-          fontsize_row = 2,
-          show_dendrogram = c(FALSE, FALSE),
-          main = "Interactive Heatmap",
-          xlab = "Sample",
-          ylab = "Pathway",
-          file = "pregnancy_pathabund_heatmap.html")
+#heatmaply(pregnant_mtx, 
+#          fontsize_col = 2,
+#          fontsize_row = 2,
+#          show_dendrogram = c(FALSE, FALSE),
+#          main = "Interactive Heatmap",
+#          xlab = "Sample",
+#          ylab = "Pathway",
+#          file = "pregnancy_pathabund_heatmap.html")
 
 ##Ref. 1: https://microbiome.github.io/tutorials/all.html
 ##Ref. 2: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
 ##Ref. 3: https://www.ml4microbiome.eu/wp-content/uploads/2021/11/Statistical-Analysis-of-Microbiome-Data-with-R-Eliana-Ibrahimi.pdf
 
 
-#### WIP - STATISTICS
-#   Need help interpreting glmfit
+### TIDY DATA ###
 
 ##Load metadata to perform statistics
-metapreg <- data.frame(read_csv("pregnant-metadata.csv"))
-#subset subject ID's to group by individual
-subject_group <- c(metapreg$Subject.ID)
+metapreg <- data.frame(read_csv("merged_metadata.csv"))
+#flip rows and columns
+pdf3 = t(pregnant_df_2)
+#make Sample.ID's match bt metadata and experimental data
+row.names(pdf3) <- metapreg$MBI.Sample.ID
 
-#create edgeR DGE list object to utilize edgeR glm likelihood tests
-yedge = DGEList(counts = pregnant_mtx, group = subject_group)
+##make it a dataframe
+pdf3 <- as.data.frame(pdf3)
+#make first column a variable column
+pdf3 <- tibble::rownames_to_column(pdf3, "MBI.Sample.ID")
+##merge metadata
+pdf4 <- full_join(pdf3, metapreg, by = "MBI.Sample.ID")
+## make first column the rowname header
+pdf5 <- data.frame(pdf4[,-1], row.names=pdf4[,1])
 
-#filter out lowly expressed genes
-keep_babies <- filterByExpr(yedge, group = subject_group)
-yedge <- yedge[keep_babies,,keep.lib.sizes=FALSE]
+## subset cases and controls
+cases <- subset(pdf5, pdf5$Group=="Case")
+cases<- cases[c(1:231)]
+controls <- subset(pdf5, pdf5$Group=="Control")
+controls <- controls[c(1:231)]
 
-#normalize counts
-yedge <- calcNormFactors.DGEList(yedge, method = "TMM")
-yedge$samples
+### NORMALITY CHECKS ####
 
+##perform normality check on controls
+contnorm <- lapply(seq_along(controls), function(i){
+  shapiro.test(controls[[i]])
+})
 
-# ** Not sure ** ?model fit by subject groupings
-#design <- model.matrix(~subject_group)
-#yedge <- estimateDisp(yedge,design)
-#fit <- glmFit(yedge,design)
-#qlf <- glmQLFTest(fit,coef=2)
-#topTags(qlf)
-#fit <- glmFit(yedge,design)
-#lrt <- glmLRT(fit)
-#topTags(lrt)
+## subset p values
+pvals <- sapply(contnorm, '[[', 'p.value')
+## append p-values to dataframe
+controls <- rbind(controls, pvals)
+row.names(controls)[20]<-"p-values"
+##clean up row names
+colnames(controls) <- colnames(pdf4)[2:232]
+## sort columns by descending p-values
+controls <- controls[,order(controls[nrow(controls),])]
 
-#summary(decideTests(lrt))
-#visualize results
-#plotMD(lrt)
+##perform normality check on cases
+casenorm <- lapply(seq_along(cases), function(i){
+  shapiro.test(cases[[i]])
+})
 
-##Ref. 4: https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+## subset p values
+pvals <- sapply(casenorm, '[[', 'p.value')
+## append p-values to dataframe
+cases <- rbind(cases, pvals)
+row.names(cases)[31]<-"p-values"
+##clean up row names
+colnames(cases) <- colnames(pdf4)[2:232]
+## sort columns by descending p-values
+cases <- cases[,order(cases[nrow(cases),])]
+
+#subset non-normally distributed cases
+nonormcontrols <- controls[colSums(controls < 0.5) > 0]
+nonormcases <- cases[colSums(cases < 0.5) > 0]
+
+### SIGNIFICANCE CHECKS ###
+
+## perform t-test bt normal cases and controls for each pathway
+
+## perform wilcox test bt nonnormal cases and controls for each pathway
+tests_list <- lapply(seq_along(controls), function(i){
+  wilcox.test(cases[[i]], controls[[i]])
+})
+## subset p values
+pvals <- sapply(tests_list, '[[', 'p.value')
+##use older dataframe to merge pvals for sorting
+pdf6 <- data.frame(pdf3[,-1], row.names=pdf3[,1])
+## append p-values to dataframe
+pdf6 <- rbind(pdf6, pvals)
+row.names(pdf6)[50]<-"p-values"
+##clean up row names
+colnames(pdf6) <- colnames(pdf4)[2:232]
+## sort columns by descending p-values
+pdfsignif <- pdf6[,order(pdf6[nrow(pdf6),])]
+## pull out significant pathway names
+pdfsigpaths <- pdfsignif[, pdfsignif[50, ] < 0.05]
+
+#Restructure data
+pdf7 <- head(pdfsigpaths, -1)
+#pdf7 <- pdf7[, -795]
+pdf7 <- tibble::rownames_to_column(pdf7, "MBI.Sample.ID")
+pdf8 <- full_join(pdf7, metapreg, by = "MBI.Sample.ID")
+
+casesdf <- subset(pdf8, pdf8$Group=="Case")
+casesdf <- casesdf[c(1:195)]
+contdf <- subset(pdf8, pdf8$Group=="Control")
+contdf <- contdf[c(1:195)]
+
+write.csv(pdf8, "pregnant_full_data.csv")
+write.csv(pdf7, "pregnant_data.csv")
+write.csv(casesdf, "case.csv")
+write.csv(contdf, "conts.csv")
+
+##Ref. 4: https://www.frontiersin.org/articles/10.3389/fams.2022.884810/full#B19
+##Ref. 5: https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+##Ref. 6: https://uofabioinformaticshub.github.io/DataVisualisaton_BIS2016/DataVisualisation.html
+##Ref. 7: https://stackoverflow.com/questions/73096100/apply-t-test-over-all-columns-of-data-frame-seperated-by-variable
+##Ref. 8: https://stackoverflow.com/questions/68720318/how-would-i-run-a-t-test-on-58-variables-columns-to-compare-2-different-data-f

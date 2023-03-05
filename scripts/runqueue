@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH -J rq_ERR1398148
+#SBATCH -p general
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=gamorten@iu.edu
+#SBATCH --mem=128G
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=24
+#SBATCH --time=30:00:00
+bash /N/project/MicrobiomeHealth/pregnant/scripts/08_humann_usage.sh --i
