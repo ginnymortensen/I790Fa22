@@ -1,23 +1,24 @@
 #!/bin/bash   ###shebang shows you which language you're using and where to find it.
 
-# Author: Kate Mortensen
-# Last Modified: 02-06-2021
+# Author: Genevieve Mortensen
+# Last Modified: 02-06-2023
+#		 03-29-2023
 
 # Description: This script creates a command script for Trimmomatic and FastQC runs (pre/post trimming). 
 
 #################################################################################
 
 # location of raw sequences
-RAW="/home/team/pregancy/sequence"  ###RAW is the variable holding our PATH to our seqeuences. 
+RAW="/N/project/MicrobiomeHealth/pregnant/data/sequence/Lin-data"  ###RAW is the variable holding our PATH to our seqeuences. 
 				    ### There must be no spaces by the equal sign. and the path must start with a forward slash.
 
 # SRR accession fastq file names.
 #S=($(find ${RAW} -wholename "*.fastq.gz" -printf '%f\n'|sed "\_R[12]\_001.fastq.gz"|sort|uniq))
-S=$(cat /home/kmorten/prego/metadata/samples.txt)  
+S=$(cat /N/project/MicrobiomeHealth/pregnant/data/sequence/Lin-data/samples.txt)  
 
 
 # output directories
-OUT_TRIM="/home/gamorten/prj/pergnant/trim"
+OUT_TRIM="/N/project/MicrobiomeHealth/pregnant/data/Lin-data_output/trim"
 
 # makes output directory if and only if it doesn't exist
 mkdir -p $OUT_TRIM  

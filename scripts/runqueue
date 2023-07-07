@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J rq_ERR1398148
+#SBATCH -J rq_ERR1398082.fastq.gz
 #SBATCH -p general
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=FAIL
 #SBATCH --mail-user=gamorten@iu.edu
 #SBATCH --mem=128G
 #SBATCH --nodes=1

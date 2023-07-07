@@ -15,7 +15,7 @@ import sys, os
 
 # range of arg1 to arg2, eg run_batch.py cd1 1 3 runs cd1 1,2,3
 # run_batch.py project start_job end_job runtime_in_hours
-files = os.listdir(os.path.join("/N", "project", "MicrobiomeHealth", "pregnant", "data", "sequence", "Lin-data", "PRJEB13870"))
+files = os.listdir(os.path.join("/N", "project", "MicrobiomeHealth", "pregnant", "data", "sequence", "Lin-data"))
 #figure out how to go through files
 for i in files:
     if os.path.exists("runqueue"):
@@ -24,7 +24,7 @@ for i in files:
     f.write("#!/bin/bash\n")
     f.write("#SBATCH -J rq_%s\n" % (i))
     f.write("#SBATCH -p general\n")
-    f.write("#SBATCH --mail-type=ALL\n")
+    f.write("#SBATCH --mail-type=FAIL\n")
     f.write("#SBATCH --mail-user=gamorten@iu.edu\n")
     f.write("#SBATCH --mem=128G\n")
     f.write("#SBATCH --nodes=1\n")
