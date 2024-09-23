@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Genevieve Mortensen
-# Wrapper script to run various metagenomic processing scripts.
+# Wrapper script to run various metagenomic processing scripts with conda environment setup.
 # Allows the user to skip specific parts of the pipeline.
 
 # Default behavior: don't skip anything
@@ -9,6 +9,35 @@ SKIP_TRIMMER=false
 SKIP_HOST_REMOVER=false
 SKIP_TAXONOMIC_PROFILER=false
 SKIP_FUNCTIONAL_PROFILER=false
+ENV_NAME="mgpipe"
+ENV_YAML="mgpipe.yaml"  # Path to the YAML file to create the environment
+
+# Function to deactivate current conda environment if active
+deactivate_conda_env() {
+    if [[ -n "$CONDA_PREFIX" ]]; then
+        echo "Deactivating the current Conda environment: $CONDA_PREFIX"
+        conda deactivate
+    fi
+}
+
+# Function to check and create mgpipe environment if it doesn't exist
+setup_conda_env() {
+    if ! conda info --envs | grep -q "^$ENV_NAME"; then
+        echo "Conda environment '$ENV_NAME' not found. Creating it..."
+        if [[ -f "$ENV_YAML" ]]; then
+            conda env create --name "$ENV_NAME" --file "$ENV_YAML"
+        else
+            echo "Error: Environment YAML file '$ENV_YAML' not found."
+            exit 1
+        fi
+    else
+        echo "Conda environment '$ENV_NAME' already exists."
+    fi
+
+    # Activate the mgpipe environment
+    echo "Activating the Conda environment: $ENV_NAME"
+    conda activate "$ENV_NAME"
+}
 
 # Function to parse the --skip argument
 parse_skip() {
@@ -107,10 +136,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Deactivate current conda environment if active and set up mgpipe environment
+deactivate_conda_env
+setup_conda_env
+
 # Execute pipeline steps in order
 run_trimmer
 run_host_remover
 run_taxonomic_profiler
 run_functional_profiler
 
-echo "Pipeline completed."
+echo "MGPipe completed."
